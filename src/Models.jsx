@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Float, ContactShadows, Sparkles } from '@react-three/drei'
 import * as THREE from 'three'
@@ -18,6 +18,9 @@ const C = {
   paperGlow: '#f2e7cf',
 }
 
+/* Frame-rate independent smoothing — identical feel at 30, 60 or 144 Hz. */
+const damp = THREE.MathUtils.damp
+
 /* Pose targets per gesture — the avatar "acts out" each section. */
 const POSES = {
   idle:      { rz: 0.22, lz: -0.22, rx: 0,   browY: 0.12, mW: 1.0, mH: 1.0, tilt: 0,     wave: 0,   bounce: 0 },
@@ -25,10 +28,27 @@ const POSES = {
   present:   { rz: 1.05, lz: -1.05, rx: 0.2, browY: 0.13, mW: 1.15, mH: 1.15, tilt: 0,    wave: 0,   bounce: 0 },
   point:     { rz: 1.55, lz: -0.24, rx: 0.1, browY: 0.13, mW: 1.05, mH: 1.0, tilt: -0.07, wave: 0,   bounce: 0 },
   think:     { rz: 1.75, lz: -0.24, rx: 0.55,browY: 0.17, mW: 0.7, mH: 0.7, tilt: 0.14,   wave: 0,   bounce: 0 },
-  celebrate: { rz: 2.5,  lz: -2.5,  rx: 0,   browY: 0.19, mW: 1.35, mH: 2.6, tilt: 0,     wave: 0,   bounce: 1 },
+  celebrate: { rz: 2.5,  lz: -2.5,  rx: 0,   browY: 0.19, mW: 1.35, mH: 2.2, tilt: 0,     wave: 0,   bounce: 1 },
 }
 
-function lerp(a, b, t) { return a + (b - a) * t }
+/* Pauses a canvas when it scrolls out of view (and under reduced motion),
+   so multiple scenes never fight the main thread while scrolling. */
+function useCanvasGate(margin = '160px') {
+  const ref = useRef(null)
+  const [inView, setInView] = useState(true)
+  const reduced = useMemo(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    []
+  )
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const obs = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { rootMargin: margin })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [margin])
+  return { ref, frameloop: reduced || !inView ? 'demand' : 'always' }
+}
 
 function Avatar({ gesture = 'idle' }) {
   const group = useRef()
@@ -39,38 +59,53 @@ function Avatar({ gesture = 'idle' }) {
   const browL = useRef()
   const browR = useRef()
   const mouth = useRef()
+  const eyeL = useRef()
+  const eyeR = useRef()
+  const blink = useRef({ next: 1.6, until: 0 })
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const t = state.clock.elapsedTime
     const p = POSES[gesture] || POSES.idle
+    const dt = Math.min(delta, 0.1)
 
     if (group.current) {
-      const baseY = -0.2 + Math.sin(t * 1.1) * 0.04 + (p.bounce ? Math.abs(Math.sin(t * 4.2)) * 0.14 : 0)
-      group.current.position.y = lerp(group.current.position.y, baseY, 0.12)
+      const baseY = -0.2 + Math.sin(t * 1.1) * 0.045 + (p.bounce ? Math.abs(Math.sin(t * 4.2)) * 0.14 : 0)
+      group.current.position.y = damp(group.current.position.y, baseY, 4, dt)
+      group.current.rotation.y = damp(group.current.rotation.y, state.pointer.x * 0.14, 3, dt)
     }
     if (halo.current) halo.current.rotation.z = t * 0.3
     if (head.current) {
-      head.current.rotation.y = lerp(head.current.rotation.y, state.pointer.x * 0.3, 0.05)
-      head.current.rotation.x = lerp(head.current.rotation.x, -state.pointer.y * 0.18, 0.05)
-      head.current.rotation.z = lerp(head.current.rotation.z, p.tilt, 0.08)
+      head.current.rotation.y = damp(head.current.rotation.y, state.pointer.x * 0.32, 4, dt)
+      head.current.rotation.x = damp(head.current.rotation.x, -state.pointer.y * 0.2, 4, dt)
+      head.current.rotation.z = damp(head.current.rotation.z, p.tilt, 5, dt)
     }
+    const idleSway = p.wave || p.bounce ? 0 : Math.sin(t * 1.3) * 0.03
     if (rArm.current) {
-      const rz = p.rz + (p.wave ? Math.sin(t * 8) * 0.2 : 0) + (p.bounce ? Math.sin(t * 6) * 0.12 : 0)
-      rArm.current.rotation.z = lerp(rArm.current.rotation.z, rz, 0.12)
-      rArm.current.rotation.x = lerp(rArm.current.rotation.x, p.rx, 0.12)
+      const rz = p.rz + idleSway + (p.wave ? Math.sin(t * 7.5) * 0.28 : 0) + (p.bounce ? Math.sin(t * 6) * 0.12 : 0)
+      rArm.current.rotation.z = damp(rArm.current.rotation.z, rz, 8, dt)
+      rArm.current.rotation.x = damp(rArm.current.rotation.x, p.rx, 6, dt)
     }
     if (lArm.current) {
-      const lz = p.lz - (p.bounce ? Math.sin(t * 6) * 0.12 : 0)
-      lArm.current.rotation.z = lerp(lArm.current.rotation.z, lz, 0.12)
+      const lz = p.lz - idleSway - (p.bounce ? Math.sin(t * 6) * 0.12 : 0)
+      lArm.current.rotation.z = damp(lArm.current.rotation.z, lz, 8, dt)
     }
     if (browL.current && browR.current) {
-      browL.current.position.y = lerp(browL.current.position.y, p.browY, 0.1)
-      browR.current.position.y = lerp(browR.current.position.y, p.browY, 0.1)
+      browL.current.position.y = damp(browL.current.position.y, p.browY, 6, dt)
+      browR.current.position.y = damp(browR.current.position.y, p.browY, 6, dt)
     }
     if (mouth.current) {
-      mouth.current.scale.x = lerp(mouth.current.scale.x, p.mW, 0.12)
-      mouth.current.scale.y = lerp(mouth.current.scale.y, p.mH, 0.12)
+      mouth.current.scale.x = damp(mouth.current.scale.x, p.mW, 8, dt)
+      mouth.current.scale.y = damp(mouth.current.scale.y, p.mH, 8, dt)
     }
+    // natural blinking
+    const b = blink.current
+    if (t > b.next) {
+      b.until = t + 0.13
+      b.next = t + 1.8 + Math.random() * 2.8
+    }
+    const eyeScale = t < b.until ? 0.12 : 1
+    if (eyeL.current) eyeL.current.scale.y = damp(eyeL.current.scale.y, eyeScale, 26, dt)
+    if (eyeR.current) eyeR.current.scale.y = damp(eyeR.current.scale.y, eyeScale, 26, dt)
   })
 
   return (
@@ -166,11 +201,11 @@ function Avatar({ gesture = 'idle' }) {
           <meshStandardMaterial color={C.hair} roughness={0.9} />
         </mesh>
 
-        <mesh position={[-0.19, 0.02, 0.45]}>
+        <mesh ref={eyeL} position={[-0.19, 0.02, 0.45]}>
           <sphereGeometry args={[0.055, 16, 16]} />
           <meshStandardMaterial color={C.glass} roughness={0.3} />
         </mesh>
-        <mesh position={[0.19, 0.02, 0.45]}>
+        <mesh ref={eyeR} position={[0.19, 0.02, 0.45]}>
           <sphereGeometry args={[0.055, 16, 16]} />
           <meshStandardMaterial color={C.glass} roughness={0.3} />
         </mesh>
@@ -225,30 +260,34 @@ function Avatar({ gesture = 'idle' }) {
 /* Companion scene — the traveling guide. `quality` trims cost on mobile. */
 export function CompanionScene({ gesture = 'idle', quality = 'high' }) {
   const low = quality === 'low'
+  const { ref, frameloop } = useCanvasGate()
   return (
-    <Canvas
-      className="r3f"
-      shadows={!low}
-      dpr={low ? [1, 1.3] : [1, 1.7]}
-      camera={{ position: [0, 0, 5], fov: 42 }}
-      gl={{ alpha: true, antialias: true }}
-    >
-      <Suspense fallback={null}>
-        <ambientLight intensity={0.75} />
-        <directionalLight position={[3, 5, 4]} intensity={2.2} color="#ffdf9e" castShadow={!low} shadow-mapSize={[1024, 1024]} />
-        <pointLight position={[-4, 1, 2]} intensity={1.1} color={C.teal} />
-        <pointLight position={[0, 3, -3]} intensity={0.8} color={C.goldBright} />
-        <Float speed={1.2} rotationIntensity={0.15} floatIntensity={0.4}>
-          <Avatar gesture={gesture} />
-        </Float>
-        {!low && <Sparkles count={30} scale={[6, 6, 4]} size={2.4} speed={0.3} color={C.goldBright} opacity={0.5} />}
-        {!low && <ContactShadows position={[0, -1.9, 0]} opacity={0.3} scale={7} blur={2.6} far={3} color="#4a3a1e" />}
-      </Suspense>
-    </Canvas>
+    <div ref={ref} className="r3f-wrap">
+      <Canvas
+        className="r3f"
+        frameloop={frameloop}
+        shadows={!low}
+        dpr={low ? [1, 1.5] : [1, 1.75]}
+        camera={{ position: [0, 0, 5], fov: 42 }}
+        gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
+      >
+        <Suspense fallback={null}>
+          <ambientLight intensity={0.75} />
+          <directionalLight position={[3, 5, 4]} intensity={2.2} color="#ffdf9e" castShadow={!low} shadow-mapSize={[1024, 1024]} />
+          <pointLight position={[-4, 1, 2]} intensity={1.1} color={C.teal} />
+          <pointLight position={[0, 3, -3]} intensity={0.8} color={C.goldBright} />
+          <Float speed={1.2} rotationIntensity={0.15} floatIntensity={0.4}>
+            <Avatar gesture={gesture} />
+          </Float>
+          {!low && <Sparkles count={30} scale={[6, 6, 4]} size={2.4} speed={0.3} color={C.goldBright} opacity={0.5} />}
+          {!low && <ContactShadows position={[0, -1.9, 0]} opacity={0.3} scale={7} blur={2.6} far={3} color="#4a3a1e" />}
+        </Suspense>
+      </Canvas>
+    </div>
   )
 }
 
-/* ===================== DOMAIN OBJECTS (unchanged behaviour) ===================== */
+/* ===================== DOMAIN OBJECTS ===================== */
 function Bot() {
   const g = useRef()
   const eyeL = useRef()
@@ -442,16 +481,25 @@ const OBJECTS = { bot: Bot, phone: Phone, chain: Blockchain, quantum: Quantum }
 export function DomainCanvas({ kind, quality = 'high' }) {
   const Obj = OBJECTS[kind] || Bot
   const low = quality === 'low'
+  const { ref, frameloop } = useCanvasGate()
   return (
-    <Canvas className="r3f domain-canvas" dpr={low ? [1, 1.2] : [1, 1.5]} camera={{ position: [0, 0, 4.2], fov: 42 }} gl={{ alpha: true, antialias: true }}>
-      <Suspense fallback={null}>
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[3, 4, 5]} intensity={1.8} color="#ffe6ad" />
-        <pointLight position={[-3, -2, 2]} intensity={1.2} color={C.teal} />
-        <Float speed={2} rotationIntensity={0.4} floatIntensity={0.9}>
-          <Obj />
-        </Float>
-      </Suspense>
-    </Canvas>
+    <div ref={ref} className="r3f-wrap">
+      <Canvas
+        className="r3f domain-canvas"
+        frameloop={frameloop}
+        dpr={low ? [1, 1.3] : [1, 1.5]}
+        camera={{ position: [0, 0, 4.2], fov: 42 }}
+        gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
+      >
+        <Suspense fallback={null}>
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[3, 4, 5]} intensity={1.8} color="#ffe6ad" />
+          <pointLight position={[-3, -2, 2]} intensity={1.2} color={C.teal} />
+          <Float speed={1.6} rotationIntensity={0.3} floatIntensity={0.7}>
+            <Obj />
+          </Float>
+        </Suspense>
+      </Canvas>
+    </div>
   )
 }

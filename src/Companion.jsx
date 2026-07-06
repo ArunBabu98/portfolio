@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
+import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimatePresence } from 'framer-motion'
 import { CompanionScene } from './Models.jsx'
 
 /* What the guide does + says in each chapter. */
@@ -15,15 +15,20 @@ const GUIDE = {
 }
 const ORDER = Object.keys(GUIDE)
 
+const SPRING = { stiffness: 90, damping: 24, mass: 0.7 }
+
 export default function Companion() {
   const [active, setActive] = useState('top')
   const { scrollY } = useScroll()
 
-  // dock from hero (large, right-centre) to a small corner guide
-  const top = useTransform(scrollY, [0, 520], ['16vh', '62vh'])
-  const right = useTransform(scrollY, [0, 520], ['5vw', '2.5vw'])
-  const width = useTransform(scrollY, [0, 520], [360, 188])
-  const height = useTransform(scrollY, [0, 520], [420, 220])
+  // dock from hero (large, right-centre) to a small corner guide —
+  // spring-smoothed so the guide glides rather than tracking scroll 1:1
+  const topS = useSpring(useTransform(scrollY, [0, 520], [16, 62]), SPRING)
+  const rightS = useSpring(useTransform(scrollY, [0, 520], [5, 2.5]), SPRING)
+  const width = useSpring(useTransform(scrollY, [0, 520], [360, 188]), SPRING)
+  const height = useSpring(useTransform(scrollY, [0, 520], [420, 220]), SPRING)
+  const top = useMotionTemplate`${topS}vh`
+  const right = useMotionTemplate`${rightS}vw`
 
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -48,7 +53,7 @@ export default function Companion() {
           initial={{ opacity: 0, y: 8, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -6, scale: 0.96 }}
-          transition={{ duration: 0.35 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
         >
           {guide.c}
           <span className="companion-bubble-tail" />

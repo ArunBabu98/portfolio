@@ -57,7 +57,7 @@ function Portal({ onDone }) {
       onDone()
       return
     }
-    const t = setTimeout(finish, 4200)
+    const t = setTimeout(finish, 3400)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
