@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="15" fill="#201a12"/>
+  <rect x="3" y="3" width="58" height="58" rx="13" fill="none" stroke="#bd8a2c" stroke-opacity="0.55" stroke-width="1.5"/>
+  <!-- hair sweep -->
+  <path d="M14 25 Q32 6 50 25" fill="none" stroke="#d9ab48" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- glasses temples -->
+  <path d="M13 31 L8 29 M51 31 L56 29" stroke="#e8bd57" stroke-width="3" stroke-linecap="round"/>
+  <!-- glasses -->
+  <circle cx="22" cy="33" r="9" fill="#2f6d68" stroke="#e8bd57" stroke-width="3.2"/>
+  <circle cx="42" cy="33" r="9" fill="#2f6d68" stroke="#e8bd57" stroke-width="3.2"/>
+  <path d="M31 33 L33 33" stroke="#e8bd57" stroke-width="3.2" stroke-linecap="round"/>
+  <!-- eye glints -->
+  <circle cx="19.5" cy="30.5" r="2.2" fill="#f4ead0"/>
+  <circle cx="39.5" cy="30.5" r="2.2" fill="#f4ead0"/>
+  <!-- code motif </> -->
+  <path d="M23 47 L16 52.5 L23 58" fill="none" stroke="#59b3a8" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M41 47 L48 52.5 L41 58" fill="none" stroke="#59b3a8" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M35.5 45.5 L28.5 59.5" stroke="#59b3a8" stroke-width="3" stroke-linecap="round"/>
+</svg>
