@@ -200,26 +200,32 @@ function Reveal({ children, className = '', delay = 0 }) {
 
 /* Scroll parallax wrapper — each chapter FALLS into place like a dropped
    page: it arrives from below, tilted toward the reader, and settles flat;
-   on the way out it lifts, tips back and dims. Entry is the emphasized beat
-   so the effect reads clearly on sections of any height. Needs the
-   `perspective` set on <main> for the 3D tilt to show. */
+   on the way out it lifts, tips back and dims.
+
+   IMPORTANT: the scroll target (outer <section>) and the animated element
+   (inner motion.div) MUST be different nodes. Transforming the element you
+   measure feeds the offset back into the scroll math and cancels the
+   visible motion — which is exactly the bug the previous version had. */
 function Page({ id, className = 'section', children }) {
   const ref = useRef(null)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
-  const y = useTransform(scrollYProgress, [0, 0.26, 0.85, 1], [150, 0, 0, -70])
-  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.85, 1], [0, 1, 1, 0.3])
-  const scale = useTransform(scrollYProgress, [0, 0.26, 0.85, 1], [0.94, 1, 1, 0.965])
-  const rotateX = useTransform(scrollYProgress, [0, 0.26, 0.85, 1], [9, 0, 0, -5])
+  const y = useTransform(scrollYProgress, [0, 0.22, 0.85, 1], [170, 0, 0, -90])
+  const opacity = useTransform(scrollYProgress, [0, 0.16, 0.85, 1], [0, 1, 1, 0.25])
+  const scale = useTransform(scrollYProgress, [0, 0.22, 0.85, 1], [0.93, 1, 1, 0.95])
+  const rotateX = useTransform(scrollYProgress, [0, 0.22, 0.85, 1], [12, 0, 0, -7])
   return (
-    <motion.section
-      id={id}
-      ref={ref}
-      className={className}
-      style={reduce ? undefined : { y, opacity, scale, rotateX, transformOrigin: '50% 0%' }}
-    >
-      {children}
-    </motion.section>
+    <section id={id} ref={ref} className={className}>
+      <motion.div
+        style={
+          reduce
+            ? undefined
+            : { y, opacity, scale, rotateX, transformPerspective: 1200, transformOrigin: '50% 0%' }
+        }
+      >
+        {children}
+      </motion.div>
+    </section>
   )
 }
 

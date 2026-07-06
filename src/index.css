@@ -263,7 +263,7 @@ h1, h2, h3 { margin: 0; font-family: var(--serif); font-weight: 500; line-height
 .cto-ledger-v { color: #e6d9bf; font-size: 0.95rem; }
 
 /* ============ Sections & chapters ============ */
-main { position: relative; z-index: 1; perspective: 1400px; }
+main { position: relative; z-index: 1; }
 /* reserved right-hand "manuscript margin" — the guide walks here, never over
    text. Above 1620px the natural viewport margin is wide enough on its own. */
 @media (min-width: 941px) and (max-width: 1620px) {
