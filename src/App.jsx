@@ -198,18 +198,26 @@ function Reveal({ children, className = '', delay = 0 }) {
   )
 }
 
-/* Scroll parallax wrapper — each chapter drifts up from below as it arrives,
-   settles while being read, then falls away like a dropped page as the next
-   one takes over. Pure transform/opacity, so it stays GPU-smooth. */
+/* Scroll parallax wrapper — each chapter FALLS into place like a dropped
+   page: it arrives from below, tilted toward the reader, and settles flat;
+   on the way out it lifts, tips back and dims. Entry is the emphasized beat
+   so the effect reads clearly on sections of any height. Needs the
+   `perspective` set on <main> for the 3D tilt to show. */
 function Page({ id, className = 'section', children }) {
   const ref = useRef(null)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
-  const y = useTransform(scrollYProgress, [0, 0.22, 0.78, 1], [90, 0, 0, -90])
-  const opacity = useTransform(scrollYProgress, [0, 0.16, 0.86, 1], [0, 1, 1, 0.25])
-  const scale = useTransform(scrollYProgress, [0, 0.2, 0.85, 1], [0.975, 1, 1, 0.985])
+  const y = useTransform(scrollYProgress, [0, 0.26, 0.85, 1], [150, 0, 0, -70])
+  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.85, 1], [0, 1, 1, 0.3])
+  const scale = useTransform(scrollYProgress, [0, 0.26, 0.85, 1], [0.94, 1, 1, 0.965])
+  const rotateX = useTransform(scrollYProgress, [0, 0.26, 0.85, 1], [9, 0, 0, -5])
   return (
-    <motion.section id={id} ref={ref} className={className} style={reduce ? undefined : { y, opacity, scale }}>
+    <motion.section
+      id={id}
+      ref={ref}
+      className={className}
+      style={reduce ? undefined : { y, opacity, scale, rotateX, transformOrigin: '50% 0%' }}
+    >
       {children}
     </motion.section>
   )
@@ -539,8 +547,9 @@ function HomeView({ isMobile, go }) {
       <Nav go={go} />
       <ChapterRail />
       <Hero isMobile={isMobile} />
-      <CtoBand />
+      {/* CtoBand lives inside <main> so it shares the page-fall perspective */}
       <main>
+        <CtoBand />
         <Origin />
         <Arsenal isMobile={isMobile} />
         <Path />
@@ -554,7 +563,22 @@ function HomeView({ isMobile, go }) {
 }
 
 export default function App() {
-  const [entered, setEntered] = useState(false)
+  // the portal plays once per browser session — repeat visits go straight in
+  const [entered, setEntered] = useState(() => {
+    try {
+      return sessionStorage.getItem('portal-seen') === '1'
+    } catch {
+      return false
+    }
+  })
+  const enter = () => {
+    try {
+      sessionStorage.setItem('portal-seen', '1')
+    } catch {
+      /* storage unavailable — portal will just replay */
+    }
+    setEntered(true)
+  }
   const [isMobile, setIsMobile] = useState(false)
   const [route, setRoute] = useState(() =>
     typeof window !== 'undefined' && window.location.hash.startsWith('#/projects') ? 'projects' : 'home'
@@ -598,7 +622,7 @@ export default function App() {
         </motion.div>
       ) : (
         <motion.div key="home" {...pageAnim}>
-          {!entered && <Portal onDone={() => setEntered(true)} />}
+          {!entered && <Portal onDone={enter} />}
           <div className={entered ? 'app-in' : 'app-hidden'}>
             <HomeView isMobile={isMobile} go={go} />
           </div>

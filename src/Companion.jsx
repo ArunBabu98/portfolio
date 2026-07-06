@@ -2,33 +2,36 @@ import { useEffect, useState } from 'react'
 import { motion, useScroll, useMotionValueEvent, useAnimationControls, AnimatePresence } from 'framer-motion'
 import { CompanionScene } from './Models.jsx'
 
-/* Where the guide stands, what he does and says, per chapter.
-   fx/fy anchor his centre as viewport fractions; s = scale.
-   He alternates sides so he visibly "walks through" the story. */
+/* What the guide does + says per chapter, and where he perches.
+   He lives in the reserved right-hand "manuscript margin" (see index.css),
+   stepping up and down it as chapters pass — never over text. */
 const GUIDE = {
-  top:      { g: 'wave',      c: "Hey — I'm Arun. Let me show you around.",     fx: 0.82, fy: 0.42, s: 1 },
-  mandate:  { g: 'present',   c: 'First up: my post as CTO of TenshiLabs.',     fx: 0.89, fy: 0.60, s: 0.52 },
-  origin:   { g: 'think',     c: 'Here is where it all began…',                 fx: 0.12, fy: 0.78, s: 0.52 },
-  arsenal:  { g: 'point',     c: 'The four fields I go deep in — take a look.', fx: 0.89, fy: 0.34, s: 0.52 },
-  path:     { g: 'present',   c: 'My path so far, step by step.',               fx: 0.12, fy: 0.24, s: 0.52 },
-  works:    { g: 'celebrate', c: "And some things I've built!",                 fx: 0.89, fy: 0.62, s: 0.56 },
-  doctrine: { g: 'think',     c: 'How I actually work.',                        fx: 0.12, fy: 0.78, s: 0.52 },
-  contact:  { g: 'wave',      c: "Let's build something. 👋",                   fx: 0.90, fy: 0.52, s: 0.62 },
+  top:      { g: 'wave',      c: "Hey — I'm Arun. Let me show you around.",     fy: 0.44, s: 1.0, hero: true },
+  mandate:  { g: 'present',   c: 'First up: my post as CTO of TenshiLabs.',     fy: 0.58, s: 0.52 },
+  origin:   { g: 'think',     c: 'Here is where it all began…',                 fy: 0.30, s: 0.52 },
+  arsenal:  { g: 'point',     c: 'The four fields I go deep in — take a look.', fy: 0.62, s: 0.52 },
+  path:     { g: 'present',   c: 'My path so far, step by step.',               fy: 0.30, s: 0.52 },
+  works:    { g: 'celebrate', c: "And some things I've built!",                 fy: 0.62, s: 0.56 },
+  doctrine: { g: 'think',     c: 'How I actually work.',                        fy: 0.30, s: 0.52 },
+  contact:  { g: 'wave',      c: "Let's build something. 👋",                   fy: 0.50, s: 0.66 },
 }
 const ORDER = Object.keys(GUIDE)
 
 const W = 340
 const H = 410
-const SPRING = { type: 'spring', stiffness: 130, damping: 24, mass: 0.9 }
+/* One gentle spring for everything. Retargeting a running spring preserves
+   velocity, so even rapid section changes blend into one continuous glide —
+   no keyframe restarts, no flicker, no jitter. */
+const SPRING = { type: 'spring', stiffness: 110, damping: 26, mass: 1 }
 
-/* Anchor → pixel offsets, clamped so he can never leave the screen
-   (64px reserved at the top for the nav). */
-function anchorPx(a, w, h) {
-  const halfW = (W / 2) * a.s + 10
-  const halfH = (H / 2) * a.s + 10
-  const cx = Math.min(Math.max(a.fx * w, halfW), w - halfW)
-  const cy = Math.min(Math.max(a.fy * h, halfH + 64), h - halfH)
-  return { x: cx - W / 2, y: cy - H / 2 }
+function perchPx(p, d) {
+  const halfW = (W / 2) * p.s
+  const halfH = (H / 2) * p.s
+  // hero: large, over the hero grid's empty right column;
+  // chapters: flush to the right margin lane
+  const cx = p.hero ? Math.min(d.w * 0.78, d.w - halfW - 24) : d.w - halfW - 14
+  const cy = Math.min(Math.max(p.fy * d.h, halfH + 70), d.h - halfH - 10)
+  return { x: cx - W / 2, y: cy - H / 2, scale: p.s }
 }
 
 const MOBILE_STATES = {
@@ -71,29 +74,16 @@ export default function Companion({ isMobile = false }) {
 
   const guide = GUIDE[active] || GUIDE.top
 
-  // travel to the active chapter's anchor: springs carry him there while the
-  // opacity dips mid-flight, so he "phases" from one page to the next.
-  // [null, …] keyframes start from the current value — on first mount that is
-  // 0, so the same animation doubles as his initial fade-in.
+  // glide to the active chapter's perch. The 180ms debounce means fast
+  // scrolling settles on ONE destination instead of thrashing mid-flight.
   useEffect(() => {
     if (isMobile) return
-    const { x, y } = anchorPx(guide, dims.w, dims.h)
-    controls.start({
-      x,
-      y,
-      scale: guide.s,
-      opacity: [null, 0.2, 1],
-      rotate: [null, guide.fx < 0.5 ? -7 : 7, 0],
-      transition: {
-        x: SPRING,
-        y: SPRING,
-        scale: SPRING,
-        opacity: { duration: 0.85, times: [0, 0.35, 1], ease: 'easeInOut' },
-        rotate: { duration: 0.85, times: [0, 0.35, 1], ease: 'easeInOut' },
-      },
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, dims, isMobile])
+    const t = setTimeout(() => {
+      const { x, y, scale } = perchPx(GUIDE[active] || GUIDE.top, dims)
+      controls.start({ x, y, scale, opacity: 1, transition: SPRING })
+    }, 180)
+    return () => clearTimeout(t)
+  }, [active, dims, isMobile, controls])
 
   const bubble = (
     <AnimatePresence mode="wait">
@@ -129,12 +119,12 @@ export default function Companion({ isMobile = false }) {
     )
   }
 
-  const init = anchorPx(GUIDE.top, dims.w, dims.h)
+  const init = perchPx(GUIDE.top, dims)
   return (
     <motion.div
       className="companion companion-desktop"
       animate={controls}
-      initial={{ x: init.x, y: init.y, scale: 1, opacity: 0, rotate: 0 }}
+      initial={{ x: init.x, y: init.y, scale: 1, opacity: 0 }}
       style={{ width: W, height: H, transformOrigin: 'center' }}
       aria-hidden="true"
     >
