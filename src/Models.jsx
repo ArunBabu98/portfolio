@@ -284,7 +284,7 @@ export function CompanionScene({ gesture = 'idle', quality = 'high', active = tr
         frameloop={active ? frameloop : 'demand'}
         shadows={!low}
         dpr={low ? [1, 1.5] : [1, 1.75]}
-        camera={{ position: [0, 0, 5], fov: 42 }}
+        camera={{ position: [0, 0, 4.5], fov: 42 }}
         gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
       >
         <Suspense fallback={null}>

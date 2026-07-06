@@ -7,13 +7,13 @@ import { CompanionScene } from './Models.jsx'
    stepping up and down it as chapters pass — never over text. */
 const GUIDE = {
   top:      { g: 'wave',      c: "Hey — I'm Arun. Let me show you around.",     fy: 0.44, s: 1.0, hero: true },
-  mandate:  { g: 'present',   c: 'First up: my post as CTO of TenshiLabs.',     fy: 0.58, s: 0.52 },
-  origin:   { g: 'think',     c: 'Here is where it all began…',                 fy: 0.30, s: 0.52 },
-  arsenal:  { g: 'point',     c: 'The four fields I go deep in — take a look.', fy: 0.62, s: 0.52 },
-  path:     { g: 'present',   c: 'My path so far, step by step.',               fy: 0.30, s: 0.52 },
-  works:    { g: 'celebrate', c: "And some things I've built!",                 fy: 0.62, s: 0.56 },
-  doctrine: { g: 'think',     c: 'How I actually work.',                        fy: 0.30, s: 0.52 },
-  contact:  { g: 'wave',      c: "Let's build something. 👋",                   fy: 0.50, s: 0.66 },
+  mandate:  { g: 'present',   c: 'First up: my post as CTO of TenshiLabs.',     fy: 0.58, s: 0.7 },
+  origin:   { g: 'think',     c: 'Here is where it all began…',                 fy: 0.32, s: 0.7 },
+  arsenal:  { g: 'point',     c: 'The four fields I go deep in — take a look.', fy: 0.62, s: 0.7 },
+  path:     { g: 'present',   c: 'My path so far, step by step.',               fy: 0.32, s: 0.7 },
+  works:    { g: 'celebrate', c: "And some things I've built!",                 fy: 0.62, s: 0.74 },
+  doctrine: { g: 'think',     c: 'How I actually work.',                        fy: 0.32, s: 0.7 },
+  contact:  { g: 'wave',      c: "Let's build something. 👋",                   fy: 0.50, s: 0.78 },
 }
 const ORDER = Object.keys(GUIDE)
 

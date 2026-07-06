@@ -260,7 +260,7 @@ main { position: relative; z-index: 1; perspective: 1400px; }
 /* reserved right-hand "manuscript margin" — the guide walks here, never over
    text. Above 1620px the natural viewport margin is wide enough on its own. */
 @media (min-width: 941px) and (max-width: 1620px) {
-  main .section, main .cto { padding-right: 218px; }
+  main .section, main .cto { padding-right: 252px; }
 }
 .section { max-width: var(--maxw); margin: 0 auto; padding: clamp(66px, 10vw, 120px) clamp(20px, 5vw, 40px); }
 .chapter-intro { margin-bottom: 56px; max-width: 800px; }
@@ -378,8 +378,8 @@ main { position: relative; z-index: 1; perspective: 1400px; }
 /* desktop guide: anchored at the origin, placed entirely via x/y transforms */
 .companion-desktop { top: 0; left: 0; }
 /* mobile: small corner guide, positioned by CSS (only opacity/scale animate) */
-.companion-mobile { top: auto; bottom: 16px; right: 12px; width: 150px; height: 178px; }
-.companion-mobile .companion-bubble { font-size: 10.5px; max-width: 150px; padding: 7px 10px; border-radius: 10px; margin-bottom: 8px; }
+.companion-mobile { top: auto; bottom: 16px; right: 12px; width: 176px; height: 200px; }
+.companion-mobile .companion-bubble { font-size: 11px; max-width: 176px; padding: 7px 11px; border-radius: 10px; margin-bottom: 8px; }
 .companion-bubble {
   position: relative; margin-bottom: 10px; max-width: 260px;
   background: var(--paper); border: 1px solid var(--line-2); color: var(--ink);
