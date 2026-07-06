@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion'
-import { HeroScene, DomainCanvas } from './Models.jsx'
+import { CompanionScene, DomainCanvas } from './Models.jsx'
+import Companion from './Companion.jsx'
+import ProjectsPage from './ProjectsPage.jsx'
 import {
   IDENTITY,
   CTO,
@@ -12,15 +14,8 @@ import {
   PRINCIPLES,
 } from './data.js'
 
-/* Inline icons — currentColor so they inherit the theme */
 function Icon({ name }) {
-  const p = {
-    width: 22,
-    height: 22,
-    viewBox: '0 0 24 24',
-    fill: 'currentColor',
-    'aria-hidden': true,
-  }
+  const p = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'currentColor', 'aria-hidden': true }
   if (name === 'linkedin')
     return (
       <svg {...p}>
@@ -33,7 +28,6 @@ function Icon({ name }) {
         <path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.21.7.82.58A12 12 0 0 0 24 12.5C24 5.87 18.63.5 12 .5z" />
       </svg>
     )
-  // mail
   return (
     <svg {...p}>
       <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4.24-8 5-8-5V6l8 5 8-5v2.24z" />
@@ -52,9 +46,6 @@ const CHAPTERS = [
   { id: 'contact', label: 'COMMS' },
 ]
 
-/* ================================================================ *
- * PORTAL — the ceremonial "unsealing" into the utopia.
- * ================================================================ */
 function Portal({ onDone }) {
   const [closing, setClosing] = useState(false)
   const finish = () => {
@@ -80,16 +71,7 @@ function Portal({ onDone }) {
           <circle className="ring ring-inner" cx="200" cy="200" r="100" />
           <circle className="ring-draw" cx="200" cy="200" r="160" />
           {Array.from({ length: 24 }).map((_, i) => (
-            <line
-              key={i}
-              className="tick"
-              x1="200"
-              y1="34"
-              x2="200"
-              y2="52"
-              transform={`rotate(${i * 15} 200 200)`}
-              style={{ animationDelay: `${0.6 + i * 0.03}s` }}
-            />
+            <line key={i} className="tick" x1="200" y1="34" x2="200" y2="52" transform={`rotate(${i * 15} 200 200)`} style={{ animationDelay: `${0.6 + i * 0.03}s` }} />
           ))}
         </svg>
         <div className="portal-glyph">◈</div>
@@ -108,14 +90,12 @@ function Portal({ onDone }) {
   )
 }
 
-/* Scroll progress */
 function ScrollProgress() {
   const { scrollYProgress } = useScroll()
   const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.4 })
   return <motion.div className="scroll-progress" style={{ scaleX }} />
 }
 
-/* Chapter rail */
 function ChapterRail() {
   const [active, setActive] = useState('top')
   useEffect(() => {
@@ -212,15 +192,26 @@ const revealV = {
 }
 function Reveal({ children, className = '', delay = 0 }) {
   return (
-    <motion.div
-      className={className}
-      variants={revealV}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ delay }}
-    >
+    <motion.div className={className} variants={revealV} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} transition={{ delay }}>
       {children}
+    </motion.div>
+  )
+}
+
+/* Animated divider between sections — the visible "transition" beat. */
+function SectionRule({ label }) {
+  return (
+    <motion.div className="section-rule" initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.8 }}>
+      <motion.span className="section-rule-line" variants={{ hidden: { scaleX: 0 }, show: { scaleX: 1, transition: { duration: 0.7, ease: 'easeOut' } } }} />
+      <motion.span className="section-rule-glyph" variants={{ hidden: { opacity: 0, rotate: -90, scale: 0.5 }, show: { opacity: 1, rotate: 0, scale: 1, transition: { duration: 0.6, delay: 0.15 } } }}>
+        ◈
+      </motion.span>
+      {label && (
+        <motion.span className="section-rule-label mono" variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: 0.3 } } }}>
+          {label}
+        </motion.span>
+      )}
+      <motion.span className="section-rule-line" variants={{ hidden: { scaleX: 0 }, show: { scaleX: 1, transition: { duration: 0.7, ease: 'easeOut' } } }} />
     </motion.div>
   )
 }
@@ -249,10 +240,7 @@ function ChapterIntro({ story }) {
   )
 }
 
-/* ================================================================ *
- * Sections
- * ================================================================ */
-function Nav() {
+function Nav({ go }) {
   return (
     <nav className="nav">
       <a className="brand" href="#top">
@@ -261,8 +249,8 @@ function Nav() {
       </a>
       <div className="nav-status mono">CTO · TENSHILABS</div>
       <div className="nav-links mono">
-        <a href="#mandate">/cto</a>
         <a href="#arsenal">/arsenal</a>
+        <a href="#/projects" onClick={(e) => { e.preventDefault(); go('/projects') }}>/projects</a>
         <a href="#works">/works</a>
         <a href="#contact">/comms</a>
       </div>
@@ -270,7 +258,7 @@ function Nav() {
   )
 }
 
-function Hero() {
+function Hero({ isMobile }) {
   const { scrollY } = useScroll()
   const y = useTransform(scrollY, [0, 600], [0, 90])
   const opacity = useTransform(scrollY, [0, 480], [1, 0])
@@ -297,9 +285,10 @@ function Hero() {
             </a>
           </div>
         </motion.div>
+        {/* On mobile the avatar sits inline here; on desktop the traveling Companion fills this space. */}
         <div className="hero-avatar">
-          <HeroScene />
-          <div className="avatar-hint mono">◒ drag to rotate</div>
+          {isMobile && <CompanionScene gesture="wave" quality="low" />}
+          {isMobile && <div className="avatar-hint mono">◒ your guide</div>}
         </div>
       </div>
       <div className="scroll-hint mono">scroll ↓</div>
@@ -307,7 +296,6 @@ function Hero() {
   )
 }
 
-/* The highlighted CTO credential band */
 function CtoBand() {
   return (
     <section className="cto" id="mandate">
@@ -343,6 +331,7 @@ function CtoBand() {
 function Origin() {
   return (
     <section className="section" id="origin">
+      <SectionRule label="I · ORIGIN" />
       <ChapterIntro story={STORY.origin} />
       <div className="stats">
         {STATS.map((s, i) => (
@@ -360,16 +349,17 @@ function Origin() {
   )
 }
 
-function Arsenal() {
+function Arsenal({ isMobile }) {
   return (
     <section className="section" id="arsenal">
+      <SectionRule label="II · ARSENAL" />
       <ChapterIntro story={STORY.arsenal} />
       <div className="pillars">
         {PILLARS.map((p, i) => (
           <Reveal key={p.id} delay={i * 0.08}>
             <article className="pillar">
               <div className="pillar-stage">
-                <DomainCanvas kind={p.object} />
+                <DomainCanvas kind={p.object} quality={isMobile ? 'low' : 'high'} />
               </div>
               <div className="pillar-tag mono">FIELD {p.tag}</div>
               <h3>{p.title}</h3>
@@ -391,6 +381,7 @@ function Arsenal() {
 function Path() {
   return (
     <section className="section" id="path">
+      <SectionRule label="III · PATH" />
       <ChapterIntro story={STORY.path} />
       <div className="timeline">
         {TRAJECTORY.map((t, i) => (
@@ -408,9 +399,10 @@ function Path() {
   )
 }
 
-function Works() {
+function Works({ go }) {
   return (
     <section className="section" id="works">
+      <SectionRule label="IV · WORKS" />
       <ChapterIntro story={STORY.builds} />
       <div className="work-grid">
         {WORK.map((w, i) => (
@@ -424,6 +416,13 @@ function Works() {
           </Reveal>
         ))}
       </div>
+      <Reveal delay={0.1}>
+        <div className="works-more">
+          <a className="btn btn-primary" href="#/projects" onClick={(e) => { e.preventDefault(); go('/projects') }}>
+            View the full project archive →
+          </a>
+        </div>
+      </Reveal>
     </section>
   )
 }
@@ -431,6 +430,7 @@ function Works() {
 function Doctrine() {
   return (
     <section className="section" id="doctrine">
+      <SectionRule label="V · DOCTRINE" />
       <ChapterIntro story={STORY.doctrine} />
       <div className="principles">
         {PRINCIPLES.map((p, i) => (
@@ -450,13 +450,7 @@ function Doctrine() {
 function Contact() {
   return (
     <section className="section contact" id="contact">
-      <Reveal>
-        <div className="chapter-meta mono center">
-          <span className="chapter-no">CHAPTER VI</span>
-          <span className="chapter-rule" />
-          <span className="chapter-label">COMMS</span>
-        </div>
-      </Reveal>
+      <SectionRule label="VI · COMMS" />
       <Reveal delay={0.05}>
         <h2 className="contact-title">Let the work do the talking.</h2>
       </Reveal>
@@ -518,28 +512,68 @@ function Footer() {
   )
 }
 
-export default function App() {
-  const [entered, setEntered] = useState(false)
+function HomeView({ isMobile, go }) {
   return (
     <>
-      {!entered && <Portal onDone={() => setEntered(true)} />}
       <div className="paper-grain" aria-hidden="true" />
       <div className="paper-vignette" aria-hidden="true" />
       <ScrollProgress />
+      {!isMobile && <Companion />}
+      <Nav go={go} />
+      <ChapterRail />
+      <Hero isMobile={isMobile} />
+      <CtoBand />
+      <main>
+        <Origin />
+        <Arsenal isMobile={isMobile} />
+        <Path />
+        <Works go={go} />
+        <Doctrine />
+        <Contact />
+      </main>
+      <Footer />
+    </>
+  )
+}
+
+export default function App() {
+  const [entered, setEntered] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [route, setRoute] = useState(() =>
+    typeof window !== 'undefined' && window.location.hash.startsWith('#/projects') ? 'projects' : 'home'
+  )
+
+  useEffect(() => {
+    const onHash = () => {
+      const r = window.location.hash.startsWith('#/projects') ? 'projects' : 'home'
+      setRoute(r)
+      window.scrollTo(0, 0)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 940px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  const go = (path) => {
+    window.location.hash = path === '/' ? '' : `#${path.startsWith('/') ? path : '/' + path}`
+  }
+
+  if (route === 'projects') {
+    return <ProjectsPage onBack={() => go('/')} />
+  }
+
+  return (
+    <>
+      {!entered && <Portal onDone={() => setEntered(true)} />}
       <div className={entered ? 'app-in' : 'app-hidden'}>
-        <Nav />
-        <ChapterRail />
-        <Hero />
-        <CtoBand />
-        <main>
-          <Origin />
-          <Arsenal />
-          <Path />
-          <Works />
-          <Doctrine />
-          <Contact />
-        </main>
-        <Footer />
+        <HomeView isMobile={isMobile} go={go} />
       </div>
     </>
   )
