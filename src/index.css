@@ -371,7 +371,8 @@ main { position: relative; z-index: 1; }
 }
 .companion-stage { width: 100%; flex: 1; min-height: 0; position: relative; }
 .companion-bubble-wrap { display: flex; justify-content: center; }
-.companion-desktop { top: 15vh; right: 5vw; width: 340px; height: 410px; }
+/* desktop guide: anchored at the origin, placed entirely via x/y transforms */
+.companion-desktop { top: 0; left: 0; }
 /* mobile: small corner guide, positioned by CSS (only opacity/scale animate) */
 .companion-mobile { top: auto; bottom: 16px; right: 12px; width: 150px; height: 178px; }
 .companion-mobile .companion-bubble { font-size: 10.5px; max-width: 150px; padding: 7px 10px; border-radius: 10px; margin-bottom: 8px; }

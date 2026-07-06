@@ -1,23 +1,35 @@
 import { useEffect, useState } from 'react'
-import { motion, useScroll, useMotionValueEvent, AnimatePresence } from 'framer-motion'
+import { motion, useScroll, useMotionValueEvent, useAnimationControls, AnimatePresence } from 'framer-motion'
 import { CompanionScene } from './Models.jsx'
 
-/* What the guide does + says in each chapter. */
+/* Where the guide stands, what he does and says, per chapter.
+   fx/fy anchor his centre as viewport fractions; s = scale.
+   He alternates sides so he visibly "walks through" the story. */
 const GUIDE = {
-  top: { g: 'wave', c: "Hey — I'm Arun. Let me show you around." },
-  mandate: { g: 'present', c: 'First up: my post as CTO of TenshiLabs.' },
-  origin: { g: 'think', c: 'Here is where it all began…' },
-  arsenal: { g: 'point', c: 'The four fields I go deep in — take a look.' },
-  path: { g: 'present', c: 'My path so far, step by step.' },
-  works: { g: 'celebrate', c: "And some things I've built!" },
-  doctrine: { g: 'think', c: 'How I actually work.' },
-  contact: { g: 'wave', c: "Let's build something. 👋" },
+  top:      { g: 'wave',      c: "Hey — I'm Arun. Let me show you around.",     fx: 0.82, fy: 0.42, s: 1 },
+  mandate:  { g: 'present',   c: 'First up: my post as CTO of TenshiLabs.',     fx: 0.89, fy: 0.60, s: 0.52 },
+  origin:   { g: 'think',     c: 'Here is where it all began…',                 fx: 0.12, fy: 0.78, s: 0.52 },
+  arsenal:  { g: 'point',     c: 'The four fields I go deep in — take a look.', fx: 0.89, fy: 0.34, s: 0.52 },
+  path:     { g: 'present',   c: 'My path so far, step by step.',               fx: 0.12, fy: 0.24, s: 0.52 },
+  works:    { g: 'celebrate', c: "And some things I've built!",                 fx: 0.89, fy: 0.62, s: 0.56 },
+  doctrine: { g: 'think',     c: 'How I actually work.',                        fx: 0.12, fy: 0.78, s: 0.52 },
+  contact:  { g: 'wave',      c: "Let's build something. 👋",                   fx: 0.90, fy: 0.52, s: 0.62 },
 }
 const ORDER = Object.keys(GUIDE)
 
-/* Slightly overdamped — settles fast with zero overshoot, so the guide
-   can never fly past its target or off screen. */
-const DOCK = { type: 'spring', stiffness: 170, damping: 26, mass: 0.75 }
+const W = 340
+const H = 410
+const SPRING = { type: 'spring', stiffness: 130, damping: 24, mass: 0.9 }
+
+/* Anchor → pixel offsets, clamped so he can never leave the screen
+   (64px reserved at the top for the nav). */
+function anchorPx(a, w, h) {
+  const halfW = (W / 2) * a.s + 10
+  const halfH = (H / 2) * a.s + 10
+  const cx = Math.min(Math.max(a.fx * w, halfW), w - halfW)
+  const cy = Math.min(Math.max(a.fy * h, halfH + 64), h - halfH)
+  return { x: cx - W / 2, y: cy - H / 2 }
+}
 
 const MOBILE_STATES = {
   hidden: { opacity: 0, scale: 0.5, y: 26 },
@@ -26,10 +38,11 @@ const MOBILE_STATES = {
 
 export default function Companion({ isMobile = false }) {
   const [active, setActive] = useState('top')
-  const [docked, setDocked] = useState(() => typeof window !== 'undefined' && window.scrollY > 380)
+  const [shown, setShown] = useState(() => typeof window !== 'undefined' && window.scrollY > 560)
   const [dims, setDims] = useState(() =>
     typeof window !== 'undefined' ? { w: window.innerWidth, h: window.innerHeight } : { w: 1280, h: 800 }
   )
+  const controls = useAnimationControls()
   const { scrollY } = useScroll()
 
   useEffect(() => {
@@ -38,12 +51,10 @@ export default function Companion({ isMobile = false }) {
     return () => window.removeEventListener('resize', update)
   }, [])
 
-  // hysteresis: dock past `on`, undock below `off` — never flip-flops at the
-  // boundary, and both directions react instantly (no scroll-linked lag)
-  const on = isMobile ? 560 : 380
-  const off = isMobile ? 440 : 280
+  // mobile: corner guide appears once the reader leaves the hero (hysteresis)
   useMotionValueEvent(scrollY, 'change', (v) => {
-    setDocked((d) => (d ? v > off : v > on))
+    if (!isMobile) return
+    setShown((d) => (d ? v > 440 : v > 560))
   })
 
   useEffect(() => {
@@ -59,6 +70,30 @@ export default function Companion({ isMobile = false }) {
   }, [])
 
   const guide = GUIDE[active] || GUIDE.top
+
+  // travel to the active chapter's anchor: springs carry him there while the
+  // opacity dips mid-flight, so he "phases" from one page to the next.
+  // [null, …] keyframes start from the current value — on first mount that is
+  // 0, so the same animation doubles as his initial fade-in.
+  useEffect(() => {
+    if (isMobile) return
+    const { x, y } = anchorPx(guide, dims.w, dims.h)
+    controls.start({
+      x,
+      y,
+      scale: guide.s,
+      opacity: [null, 0.2, 1],
+      rotate: [null, guide.fx < 0.5 ? -7 : 7, 0],
+      transition: {
+        x: SPRING,
+        y: SPRING,
+        scale: SPRING,
+        opacity: { duration: 0.85, times: [0, 0.35, 1], ease: 'easeInOut' },
+        rotate: { duration: 0.85, times: [0, 0.35, 1], ease: 'easeInOut' },
+      },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, dims, isMobile])
 
   const bubble = (
     <AnimatePresence mode="wait">
@@ -76,46 +111,38 @@ export default function Companion({ isMobile = false }) {
     </AnimatePresence>
   )
 
-  // Mobile: small corner guide that fades in once the reader leaves the hero
-  // (the hero has its own inline avatar). Position is pure CSS; only
-  // opacity/scale animate.
   if (isMobile) {
     return (
       <motion.div
         className="companion companion-mobile"
         variants={MOBILE_STATES}
         initial={false}
-        animate={docked ? 'shown' : 'hidden'}
-        transition={DOCK}
+        animate={shown ? 'shown' : 'hidden'}
+        transition={SPRING}
         aria-hidden="true"
       >
         {bubble}
         <div className="companion-stage">
-          <CompanionScene gesture={guide.g} quality="low" active={docked} />
+          <CompanionScene gesture={guide.g} quality="low" active={shown} />
         </div>
       </motion.div>
     )
   }
 
-  // Desktop rests at top:15vh / right:5vw (CSS); docking is a pure
-  // transform (x/y/scale) — GPU-composited, no layout work, and the canvas
-  // itself is NEVER resized. Resizing a WebGL canvas every frame is what
-  // caused the jitter and blank frames mid-transition before.
-  const dock = { x: dims.w * 0.03, y: dims.h * 0.49, scale: 0.5 } // 5vw→2vw, 15vh→64vh
+  const init = anchorPx(GUIDE.top, dims.w, dims.h)
   return (
     <motion.div
       className="companion companion-desktop"
-      initial={false}
-      animate={docked ? dock : { x: 0, y: 0, scale: 1 }}
-      transition={DOCK}
-      style={{ transformOrigin: 'top right' }}
+      animate={controls}
+      initial={{ x: init.x, y: init.y, scale: 1, opacity: 0, rotate: 0 }}
+      style={{ width: W, height: H, transformOrigin: 'center' }}
       aria-hidden="true"
     >
-      {/* counter-scale keeps the caption readable while the guide shrinks */}
+      {/* counter-scale keeps the caption readable at every size */}
       <motion.div
         className="companion-bubble-wrap"
-        animate={{ scale: docked ? 1.8 : 1 }}
-        transition={DOCK}
+        animate={{ scale: guide.s >= 0.95 ? 1 : Math.min(1.9, 0.95 / guide.s) }}
+        transition={SPRING}
         style={{ transformOrigin: 'bottom center' }}
       >
         {bubble}

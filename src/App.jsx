@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion'
+import { motion, useScroll, useTransform, useSpring, useReducedMotion, AnimatePresence } from 'framer-motion'
 import { CompanionScene, DomainCanvas } from './Models.jsx'
 import Companion from './Companion.jsx'
 import ProjectsPage from './ProjectsPage.jsx'
@@ -198,6 +198,23 @@ function Reveal({ children, className = '', delay = 0 }) {
   )
 }
 
+/* Scroll parallax wrapper — each chapter drifts up from below as it arrives,
+   settles while being read, then falls away like a dropped page as the next
+   one takes over. Pure transform/opacity, so it stays GPU-smooth. */
+function Page({ id, className = 'section', children }) {
+  const ref = useRef(null)
+  const reduce = useReducedMotion()
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
+  const y = useTransform(scrollYProgress, [0, 0.22, 0.78, 1], [90, 0, 0, -90])
+  const opacity = useTransform(scrollYProgress, [0, 0.16, 0.86, 1], [0, 1, 1, 0.25])
+  const scale = useTransform(scrollYProgress, [0, 0.2, 0.85, 1], [0.975, 1, 1, 0.985])
+  return (
+    <motion.section id={id} ref={ref} className={className} style={reduce ? undefined : { y, opacity, scale }}>
+      {children}
+    </motion.section>
+  )
+}
+
 /* Animated divider between sections — the visible "transition" beat. */
 function SectionRule({ label }) {
   return (
@@ -298,7 +315,7 @@ function Hero({ isMobile }) {
 
 function CtoBand() {
   return (
-    <section className="cto" id="mandate">
+    <Page id="mandate" className="cto">
       <Reveal>
         <div className="cto-panel">
           <span className="corner corner-tl" />
@@ -324,13 +341,13 @@ function CtoBand() {
           </div>
         </div>
       </Reveal>
-    </section>
+    </Page>
   )
 }
 
 function Origin() {
   return (
-    <section className="section" id="origin">
+    <Page id="origin">
       <SectionRule label="I · ORIGIN" />
       <ChapterIntro story={STORY.origin} />
       <div className="stats">
@@ -345,13 +362,13 @@ function Origin() {
           </Reveal>
         ))}
       </div>
-    </section>
+    </Page>
   )
 }
 
 function Arsenal({ isMobile }) {
   return (
-    <section className="section" id="arsenal">
+    <Page id="arsenal">
       <SectionRule label="II · ARSENAL" />
       <ChapterIntro story={STORY.arsenal} />
       <div className="pillars">
@@ -374,13 +391,13 @@ function Arsenal({ isMobile }) {
           </Reveal>
         ))}
       </div>
-    </section>
+    </Page>
   )
 }
 
 function Path() {
   return (
-    <section className="section" id="path">
+    <Page id="path">
       <SectionRule label="III · PATH" />
       <ChapterIntro story={STORY.path} />
       <div className="timeline">
@@ -395,13 +412,13 @@ function Path() {
           </Reveal>
         ))}
       </div>
-    </section>
+    </Page>
   )
 }
 
 function Works({ go }) {
   return (
-    <section className="section" id="works">
+    <Page id="works">
       <SectionRule label="IV · WORKS" />
       <ChapterIntro story={STORY.builds} />
       <div className="work-grid">
@@ -423,13 +440,13 @@ function Works({ go }) {
           </a>
         </div>
       </Reveal>
-    </section>
+    </Page>
   )
 }
 
 function Doctrine() {
   return (
-    <section className="section" id="doctrine">
+    <Page id="doctrine">
       <SectionRule label="V · DOCTRINE" />
       <ChapterIntro story={STORY.doctrine} />
       <div className="principles">
@@ -443,13 +460,13 @@ function Doctrine() {
           </Reveal>
         ))}
       </div>
-    </section>
+    </Page>
   )
 }
 
 function Contact() {
   return (
-    <section className="section contact" id="contact">
+    <Page id="contact" className="section contact">
       <SectionRule label="VI · COMMS" />
       <Reveal delay={0.05}>
         <h2 className="contact-title">Let the work do the talking.</h2>
@@ -494,7 +511,7 @@ function Contact() {
           </a>
         </Reveal>
       </div>
-    </section>
+    </Page>
   )
 }
 
@@ -545,9 +562,10 @@ export default function App() {
 
   useEffect(() => {
     const onHash = () => {
-      const r = window.location.hash.startsWith('#/projects') ? 'projects' : 'home'
-      setRoute(r)
-      window.scrollTo(0, 0)
+      // note: no scrollTo here — in-page #anchor jumps share this event, and
+      // resetting scroll would fight them. Route scroll reset happens in
+      // AnimatePresence.onExitComplete below.
+      setRoute(window.location.hash.startsWith('#/projects') ? 'projects' : 'home')
     }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
@@ -565,16 +583,27 @@ export default function App() {
     window.location.hash = path === '/' ? '' : `#${path.startsWith('/') ? path : '/' + path}`
   }
 
-  if (route === 'projects') {
-    return <ProjectsPage onBack={() => go('/')} />
+  const pageAnim = {
+    initial: { opacity: 0, y: 26 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -18 },
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
   }
 
   return (
-    <>
-      {!entered && <Portal onDone={() => setEntered(true)} />}
-      <div className={entered ? 'app-in' : 'app-hidden'}>
-        <HomeView isMobile={isMobile} go={go} />
-      </div>
-    </>
+    <AnimatePresence mode="wait" onExitComplete={() => window.scrollTo(0, 0)}>
+      {route === 'projects' ? (
+        <motion.div key="projects" {...pageAnim}>
+          <ProjectsPage onBack={() => go('/')} />
+        </motion.div>
+      ) : (
+        <motion.div key="home" {...pageAnim}>
+          {!entered && <Portal onDone={() => setEntered(true)} />}
+          <div className={entered ? 'app-in' : 'app-hidden'}>
+            <HomeView isMobile={isMobile} go={go} />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
