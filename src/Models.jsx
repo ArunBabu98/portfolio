@@ -62,6 +62,18 @@ function Avatar({ gesture = 'idle' }) {
   const eyeL = useRef()
   const eyeR = useRef()
   const blink = useRef({ next: 1.6, until: 0 })
+  const ptr = useRef({ x: 0, y: 0 })
+
+  // The companion sits in a pointer-events:none layer, so the canvas never
+  // receives pointer events — track the window pointer for head-look instead.
+  useEffect(() => {
+    const onMove = (e) => {
+      ptr.current.x = (e.clientX / window.innerWidth) * 2 - 1
+      ptr.current.y = (e.clientY / window.innerHeight) * 2 - 1
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => window.removeEventListener('pointermove', onMove)
+  }, [])
 
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime
@@ -71,12 +83,15 @@ function Avatar({ gesture = 'idle' }) {
     if (group.current) {
       const baseY = -0.2 + Math.sin(t * 1.1) * 0.045 + (p.bounce ? Math.abs(Math.sin(t * 4.2)) * 0.14 : 0)
       group.current.position.y = damp(group.current.position.y, baseY, 4, dt)
-      group.current.rotation.y = damp(group.current.rotation.y, state.pointer.x * 0.14, 3, dt)
+      group.current.rotation.y = damp(group.current.rotation.y, ptr.current.x * 0.14, 3, dt)
     }
     if (halo.current) halo.current.rotation.z = t * 0.3
     if (head.current) {
-      head.current.rotation.y = damp(head.current.rotation.y, state.pointer.x * 0.32, 4, dt)
-      head.current.rotation.x = damp(head.current.rotation.x, -state.pointer.y * 0.2, 4, dt)
+      // pointer look + a gentle autonomous gaze so he stays alive on touch devices
+      const lookX = ptr.current.x * 0.3 + Math.sin(t * 0.5) * 0.07
+      const lookY = ptr.current.y * 0.18 + Math.sin(t * 0.33) * 0.03
+      head.current.rotation.y = damp(head.current.rotation.y, lookX, 4, dt)
+      head.current.rotation.x = damp(head.current.rotation.x, lookY, 4, dt)
       head.current.rotation.z = damp(head.current.rotation.z, p.tilt, 5, dt)
     }
     const idleSway = p.wave || p.bounce ? 0 : Math.sin(t * 1.3) * 0.03
@@ -257,15 +272,16 @@ function Avatar({ gesture = 'idle' }) {
   )
 }
 
-/* Companion scene — the traveling guide. `quality` trims cost on mobile. */
-export function CompanionScene({ gesture = 'idle', quality = 'high' }) {
+/* Companion scene — the traveling guide. `quality` trims cost on mobile;
+   `active={false}` pauses the render loop while the guide is hidden. */
+export function CompanionScene({ gesture = 'idle', quality = 'high', active = true }) {
   const low = quality === 'low'
   const { ref, frameloop } = useCanvasGate()
   return (
     <div ref={ref} className="r3f-wrap">
       <Canvas
         className="r3f"
-        frameloop={frameloop}
+        frameloop={active ? frameloop : 'demand'}
         shadows={!low}
         dpr={low ? [1, 1.5] : [1, 1.75]}
         camera={{ position: [0, 0, 5], fov: 42 }}

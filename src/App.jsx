@@ -518,7 +518,7 @@ function HomeView({ isMobile, go }) {
       <div className="paper-grain" aria-hidden="true" />
       <div className="paper-vignette" aria-hidden="true" />
       <ScrollProgress />
-      {!isMobile && <Companion />}
+      <Companion isMobile={isMobile} />
       <Nav go={go} />
       <ChapterRail />
       <Hero isMobile={isMobile} />

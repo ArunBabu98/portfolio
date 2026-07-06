@@ -159,8 +159,9 @@ h1, h2, h3 { margin: 0; font-family: var(--serif); font-weight: 500; line-height
 @keyframes enterUp { from { opacity: 0; transform: translateY(16px) scale(0.995); } to { opacity: 1; transform: none; } }
 
 /* ============ Chapter rail ============ */
-.rail { position: fixed; right: clamp(12px, 2.5vw, 30px); top: 50%; transform: translateY(-50%); z-index: 45; display: flex; flex-direction: column; gap: 18px; }
-.rail-node { display: flex; align-items: center; gap: 10px; justify-content: flex-end; opacity: 0.5; transition: opacity 0.3s; }
+/* lives on the LEFT edge — the traveling guide owns the right edge */
+.rail { position: fixed; left: clamp(12px, 2.5vw, 30px); top: 50%; transform: translateY(-50%); z-index: 45; display: flex; flex-direction: column; gap: 18px; }
+.rail-node { display: flex; flex-direction: row-reverse; align-items: center; gap: 10px; justify-content: flex-end; opacity: 0.5; transition: opacity 0.3s; }
 .rail-node:hover { opacity: 1; }
 .rail-label { font-size: 9px; letter-spacing: 0.18em; color: var(--sepia); }
 .rail-tick { width: 20px; height: 1px; background: var(--sepia); transition: all 0.3s; }
@@ -366,8 +367,14 @@ main { position: relative; z-index: 1; }
 .companion {
   position: fixed; z-index: 40; pointer-events: none;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  will-change: transform;
 }
 .companion-stage { width: 100%; flex: 1; min-height: 0; position: relative; }
+.companion-bubble-wrap { display: flex; justify-content: center; }
+.companion-desktop { top: 15vh; right: 5vw; width: 340px; height: 410px; }
+/* mobile: small corner guide, positioned by CSS (only opacity/scale animate) */
+.companion-mobile { top: auto; bottom: 16px; right: 12px; width: 150px; height: 178px; }
+.companion-mobile .companion-bubble { font-size: 10.5px; max-width: 150px; padding: 7px 10px; border-radius: 10px; margin-bottom: 8px; }
 .companion-bubble {
   position: relative; margin-bottom: 10px; max-width: 260px;
   background: var(--paper); border: 1px solid var(--line-2); color: var(--ink);
@@ -438,7 +445,6 @@ main { position: relative; z-index: 1; }
   .skill-grid { grid-template-columns: 1fr; }
   .proj-grid { grid-template-columns: 1fr; }
   .rail { display: none; }
-  .companion { display: none; }
   /* tighter, calmer rhythm on mobile */
   .section { padding-top: 62px; padding-bottom: 62px; }
   .chapter-intro { margin-bottom: 40px; }
